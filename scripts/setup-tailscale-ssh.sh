@@ -183,14 +183,10 @@ tailscale_up() {
     args+=(--hostname "$TAILSCALE_HOSTNAME")
   fi
 
-  if [[ -n "${TS_AUTHKEY:-}" ]]; then
-    args+=(--auth-key "$TS_AUTHKEY")
-  fi
-
   ts_ipv4="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
 
   if [[ -z "$ts_ipv4" ]]; then
-    log "Running tailscale up. If no TS_AUTHKEY was provided, open the printed login URL."
+    log "Running tailscale up. Open the printed Tailscale login URL to authenticate this VM."
     $SUDO tailscale up "${args[@]}"
   elif [[ "${#args[@]}" -gt 0 ]]; then
     log "Tailscale is already authenticated; applying requested tailscale up options."
