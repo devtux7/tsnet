@@ -54,6 +54,10 @@ install_tailscale() {
   curl -fsSL https://tailscale.com/install.sh | $SUDO sh
 }
 
+tailscale_up_supports_qr() {
+  tailscale up --help 2>&1 | grep -q -- '--qr'
+}
+
 install_openssh_server() {
   log "Installing OpenSSH server."
   apt_install openssh-server
@@ -177,6 +181,7 @@ configure_firewall() {
 
 tailscale_up() {
   local args=()
+  local login_args=()
   local ts_ipv4
 
   if [[ -n "${TAILSCALE_HOSTNAME:-}" ]]; then
@@ -186,8 +191,17 @@ tailscale_up() {
   ts_ipv4="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
 
   if [[ -z "$ts_ipv4" ]]; then
-    log "Running tailscale up. Open the printed Tailscale login URL to authenticate this VM."
-    $SUDO tailscale up "${args[@]}"
+    login_args=("${args[@]}")
+    if [[ "${TAILSCALE_LOGIN_QR:-true}" == "true" ]]; then
+      if tailscale_up_supports_qr; then
+        login_args+=(--qr --qr-format "${TAILSCALE_QR_FORMAT:-small}")
+      else
+        warn "This Tailscale version does not support login QR codes; falling back to the login URL only."
+      fi
+    fi
+
+    log "Running tailscale up. Open the printed Tailscale login URL, or scan the QR code if shown."
+    $SUDO tailscale up "${login_args[@]}"
   elif [[ "${#args[@]}" -gt 0 ]]; then
     log "Tailscale is already authenticated; applying requested tailscale up options."
     $SUDO tailscale up "${args[@]}"

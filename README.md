@@ -47,7 +47,7 @@ curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-ta
 
 The `| bash` part executes the downloaded script. Without it, `curl` only prints the script content.
 
-During setup, the script runs `tailscale up`. If the VM is not already authenticated, Tailscale prints a login URL. Open that URL in your browser, complete the Tailscale login, and the script will continue after the VM joins your tailnet.
+During setup, the script runs `tailscale up`. If the VM is not already authenticated, Tailscale prints a login URL and, when supported by the installed Tailscale version, a QR code. Open the URL or scan the QR code with a trusted phone, complete the Tailscale login, and the script will continue after the VM joins your tailnet.
 
 To set a Tailscale device name:
 
@@ -80,6 +80,8 @@ The script may ask for `sudo`.
 | --- | --- | --- |
 | `SSH_ACCESS_MODE` | `tailscale` | `tailscale` enables Tailscale SSH only. `openssh` uses classic OpenSSH. `both` enables both. |
 | `TAILSCALE_HOSTNAME` | Current hostname | Tailscale device name. |
+| `TAILSCALE_LOGIN_QR` | `true` | Shows a QR code for the Tailscale login URL when the installed Tailscale CLI supports it. |
+| `TAILSCALE_QR_FORMAT` | `small` | QR code format passed to `tailscale up --qr-format`. Use `small` or `large`. |
 | `LOCKDOWN_SSH_TO_TAILSCALE` | `true` | Restricts SSH to the Tailscale interface with UFW. |
 | `FORCE_LOCKDOWN` | `false` | Applies the firewall restriction even when the script is running from a non-Tailscale SSH session. |
 
@@ -103,7 +105,7 @@ Classic OpenSSH mode supports these additional variables:
 curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | bash
 ```
 
-2. Open the Tailscale login URL printed by the script when prompted.
+2. Open the Tailscale login URL, or scan the printed QR code, when prompted.
 
 3. Note the Tailscale IP address printed at the end.
 
@@ -203,6 +205,8 @@ Wrong username:
 
 - Tailscale SSH: https://tailscale.com/docs/features/tailscale-ssh
 - Tailscale VS Code extension: https://tailscale.com/docs/integrations/vscode-extension
+- Tailscale `up` command: https://tailscale.com/kb/1241/tailscale-up
+- Tailscale QR code setup: https://tailscale.com/docs/features/access-control/device-management/how-to/set-up-qr-code
 - Tailscale Linux install: https://tailscale.com/docs/install/linux
 - OrbStack SSH access: https://docs.orbstack.dev/machines/ssh
 - OrbStack Linux networking: https://docs.orbstack.dev/machines/network
