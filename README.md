@@ -1,13 +1,16 @@
 # OrbStack Ubuntu Tailscale SSH Setup
 
-This repository provides a one-command setup script for accessing an OrbStack Ubuntu VM over Tailscale with terminal SSH and VS Code Remote - SSH.
+This repository provides a one-command setup script for accessing an OrbStack Ubuntu VM over Tailscale.
+
+The default setup uses Tailscale SSH. That means you do not need to copy SSH keys between devices and you do not need to set a Linux password for SSH. Tailscale handles authentication and authorization with your tailnet identity and policy.
 
 The goal is to:
 
-- Reach the VM from another device or network.
+- Reach the VM from another trusted device in your tailnet.
 - Avoid router or modem port forwarding.
 - Avoid exposing port 22 to the public internet.
-- Work on files and projects inside the VM with VS Code Remote - SSH.
+- Avoid manual SSH key copying for personal tailnet workflows.
+- Use terminal SSH and the Tailscale VS Code extension.
 
 ## Overview
 
@@ -17,9 +20,9 @@ If the other device is connected to the same Tailscale network, also known as th
 ssh user@100.x.y.z
 ```
 
-The most compatible setup for VS Code Remote - SSH is OpenSSH server inside the Ubuntu VM. Tailscale removes the need for public port forwarding, but VS Code Remote - SSH still expects an SSH server running on the remote machine.
+With Tailscale SSH enabled, the SSH client still speaks the SSH protocol, but Tailscale handles the authentication step. Access is controlled by your tailnet's SSH policy, not by copied SSH public keys or Linux account passwords.
 
-OrbStack's built-in SSH endpoint is excellent for local `ssh orb` usage, but OrbStack documents it as accepting only `localhost` connections. For direct access from another device, install and run an SSH server inside the Linux machine.
+This is different from making OpenSSH accept empty passwords. Empty-password OpenSSH is not recommended. It removes the host-level authentication boundary and trusts every permitted network path too much. Tailscale SSH is the right passwordless path because it keeps identity and authorization in Tailscale.
 
 ## Architecture
 
@@ -28,26 +31,28 @@ Other device
   -> Tailscale client
   -> Encrypted tailnet
   -> OrbStack Ubuntu VM Tailscale IP
-  -> OpenSSH server
-  -> Terminal or VS Code Remote - SSH
+  -> Tailscale SSH
+  -> Linux shell as an allowed local user
 ```
 
 This flow does not open `22/tcp` on your router. The script configures UFW inside the VM so SSH is allowed on the `tailscale0` interface and denied on other interfaces.
 
 ## One-Command Setup
 
-Once this repository is available on GitHub, run this inside the Ubuntu VM:
+Run this inside the Ubuntu VM:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/orbstack-ubuntu-tailscale-ssh/main/scripts/setup-tailscale-ssh.sh | bash
+curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | bash
 ```
+
+The `| bash` part executes the downloaded script. Without it, `curl` only prints the script content.
 
 During setup, the script runs `tailscale up`. If the VM is not already authenticated, Tailscale prints a login URL. Open that URL in your browser, complete the Tailscale login, and the script will continue after the VM joins your tailnet.
 
 To set a Tailscale device name:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/orbstack-ubuntu-tailscale-ssh/main/scripts/setup-tailscale-ssh.sh | TAILSCALE_HOSTNAME=orbstack-ubuntu bash
+curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | TAILSCALE_HOSTNAME=orbstack-ubuntu bash
 ```
 
 ## Local Usage
@@ -63,96 +68,96 @@ The script may ask for `sudo`.
 ## What The Script Does
 
 - Checks that it is running on Ubuntu.
-- Installs `ca-certificates`, `curl`, `openssh-server`, and `ufw`.
-- Installs Tailscale using the official Linux install script.
+- Installs `ca-certificates`, `curl`, `ufw`, and Tailscale.
 - Runs `tailscale up` and lets Tailscale generate the browser login URL when needed.
-- Enables the OpenSSH service.
-- Writes a small SSH hardening config snippet.
-- Optionally disables SSH password login.
-- Optionally adds public keys to `~/.ssh/authorized_keys`.
+- Enables Tailscale SSH by default.
 - Restricts `22/tcp` to the `tailscale0` interface with UFW.
-- Prints SSH and VS Code Remote - SSH connection details.
+- Prints SSH connection details.
 
 ## Environment Variables
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `SSH_ACCESS_MODE` | `tailscale` | `tailscale` enables Tailscale SSH only. `openssh` uses classic OpenSSH. `both` enables both. |
 | `TAILSCALE_HOSTNAME` | Current hostname | Tailscale device name. |
+| `LOCKDOWN_SSH_TO_TAILSCALE` | `true` | Restricts SSH to the Tailscale interface with UFW. |
+| `FORCE_LOCKDOWN` | `false` | Applies the firewall restriction even when the script is running from a non-Tailscale SSH session. |
+
+Classic OpenSSH mode supports these additional variables:
+
+| Variable | Default | Description |
+| --- | --- | --- |
 | `TARGET_USER` | User that invoked `sudo` | Linux user whose SSH keys should be configured. |
 | `SSH_PUBLIC_KEY` | Empty | Public key to append to `authorized_keys`. |
 | `GITHUB_USER` | Empty | Imports public keys from `https://github.com/USER.keys`. |
 | `AUTHORIZED_KEYS_FILE` | Empty | Local authorized keys file to import. |
 | `IMPORT_MAC_ED25519_KEY` | `true` | Imports `/mnt/mac/Users/$USER/.ssh/id_ed25519.pub` when present inside OrbStack. |
 | `DISABLE_PASSWORD_AUTH` | `false` | Disables SSH password login when set to `true`. Add and test a key first. |
-| `LOCKDOWN_SSH_TO_TAILSCALE` | `true` | Restricts SSH to the Tailscale interface with UFW. |
-| `FORCE_LOCKDOWN` | `false` | Applies the firewall restriction even when the script is running from a non-Tailscale SSH session. |
-| `ENABLE_TAILSCALE_SSH` | `false` | Also enables Tailscale SSH. This is not required for VS Code Remote - SSH. |
+| `ENABLE_TAILSCALE_SSH` | `false` | Also enables Tailscale SSH when `SSH_ACCESS_MODE=openssh`. |
 
 ## Recommended Setup
 
-1. Make sure the device you will connect from has an SSH key:
+1. Run the script inside the Ubuntu VM:
 
 ```bash
-ssh-keygen -t ed25519
+curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | bash
 ```
 
-2. Run the script inside the Ubuntu VM. To provide your public key directly:
+2. Open the Tailscale login URL printed by the script when prompted.
 
-```bash
-TAILSCALE_HOSTNAME=orbstack-ubuntu \
-SSH_PUBLIC_KEY='ssh-ed25519 AAAA... your-key' \
-DISABLE_PASSWORD_AUTH=true \
-bash scripts/setup-tailscale-ssh.sh
-```
+3. Note the Tailscale IP address printed at the end.
 
-3. Open the Tailscale login URL printed by the script when prompted.
-
-4. Note the Tailscale IP address printed at the end.
-
-5. From another device connected to the same tailnet, test SSH:
+4. From another device connected to the same tailnet, test SSH:
 
 ```bash
 ssh user@100.x.y.z
 ```
 
-## VS Code Remote - SSH
+If your tailnet uses the default Tailscale SSH policy, you can usually connect to your own devices as a non-root user. If you customized your tailnet policy, make sure it includes an SSH rule that allows your source device or user to connect to this VM as the target Linux username.
+
+## VS Code
+
+The recommended path is the Tailscale extension for Visual Studio Code.
 
 On the other device:
 
 1. Install Tailscale and sign in to the same tailnet.
 2. Install VS Code.
-3. Install the `Remote - SSH` extension.
-4. Test plain SSH from a terminal first:
+3. Install the Tailscale extension.
+4. Open the Tailscale machine explorer.
+5. Select the VM and attach VS Code to it, or start a terminal session.
 
-```bash
-ssh user@100.x.y.z
-```
-
-5. Add an entry to your local `~/.ssh/config`:
+If your local username is different from the Linux username on the VM, add a local SSH config entry with the remote username:
 
 ```sshconfig
-Host orbstack-ubuntu
-  HostName 100.x.y.z
+Host orbstack-ubuntu.example.ts.net
   User user
-  Port 22
-  IdentityFile ~/.ssh/id_ed25519
 ```
 
-6. In VS Code, run `Remote-SSH: Connect to Host...` and select `orbstack-ubuntu`.
+You can get the MagicDNS name from Tailscale. You can also use the Tailscale IP address directly with normal terminal SSH.
 
-If MagicDNS is enabled, you can use the Tailscale device name as `HostName`.
+## Classic OpenSSH Mode
 
-## Tailscale SSH vs OpenSSH
+If you want the older OpenSSH behavior with SSH keys or password authentication, run:
 
-Tailscale SSH can be a good option for terminal access, and Tailscale ACLs can manage who is allowed to connect. VS Code Remote - SSH, however, expects an SSH server on the remote host. This repository installs OpenSSH server for that compatibility path.
+```bash
+curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | SSH_ACCESS_MODE=openssh bash
+```
 
-You can also enable Tailscale SSH with `ENABLE_TAILSCALE_SSH=true`, but treat OpenSSH over the Tailscale IP as the default route for VS Code.
+To enable both Tailscale SSH and OpenSSH:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | SSH_ACCESS_MODE=both bash
+```
+
+OpenSSH mode is useful when a tool specifically needs the host OpenSSH server. For normal terminal access and Tailscale's VS Code workflow, prefer the default Tailscale SSH mode.
 
 ## Security Notes
 
-- Test key-based SSH before disabling password login.
+- Do not enable empty-password OpenSSH. Use Tailscale SSH for passwordless access.
+- Tailscale SSH access depends on your tailnet SSH policy.
 - The script applies UFW rules that allow `22/tcp` on `tailscale0` and deny `22/tcp` elsewhere.
-- Use Tailscale ACLs to limit which users and devices can access the VM.
+- Use Tailscale ACLs and SSH rules to limit which users and devices can access the VM.
 - If OrbStack has `Expose ports to LAN` enabled, services listening on `0.0.0.0` may be visible from the LAN. This script applies a UFW restriction for SSH.
 
 ## Checks
@@ -162,7 +167,7 @@ Inside the Ubuntu VM:
 ```bash
 tailscale status
 tailscale ip -4
-systemctl status ssh
+tailscale debug prefs
 sudo ufw status verbose
 ```
 
@@ -175,6 +180,13 @@ ssh -v user@100.x.y.z
 
 ## Troubleshooting
 
+SSH asks for a password:
+
+- Re-run the script to ensure Tailscale SSH is enabled.
+- Check that the target VM is online in `tailscale status`.
+- Check your tailnet SSH policy. Tailscale SSH must be allowed for the source user/device and target Linux username.
+- Use the Tailscale VS Code extension if your goal is VS Code access.
+
 SSH timeout:
 
 - Is the other device signed in to Tailscale?
@@ -182,24 +194,15 @@ SSH timeout:
 - Does `sudo ufw status verbose` show the `tailscale0` allow rule?
 - Do your Tailscale ACLs allow `22/tcp` access?
 
-Permission denied:
+Wrong username:
 
-- Are you using the correct Linux username?
-- Is your public key in `~/.ssh/authorized_keys` on the VM?
-- Are the permissions correct: `700` for `~/.ssh` and `600` for `authorized_keys`?
-
-VS Code cannot connect:
-
-- Test `ssh user@100.x.y.z` from a terminal first.
-- Check `HostName`, `User`, and `IdentityFile` in your VS Code Remote - SSH config.
-- Make sure the VM has enough memory for the VS Code remote server.
+- Use the Linux username that exists inside the VM.
+- If using MagicDNS with VS Code, add a local SSH config entry that sets `User`.
 
 ## References
 
-- Tailscale Linux install: https://tailscale.com/docs/install/linux
-- Tailscale SSH Linux VM guide: https://tailscale.com/docs/how-to/connect-ssh-linux-vm
 - Tailscale SSH: https://tailscale.com/docs/features/tailscale-ssh
+- Tailscale VS Code extension: https://tailscale.com/docs/integrations/vscode-extension
+- Tailscale Linux install: https://tailscale.com/docs/install/linux
 - OrbStack SSH access: https://docs.orbstack.dev/machines/ssh
 - OrbStack Linux networking: https://docs.orbstack.dev/machines/network
-- Ubuntu OpenSSH server: https://documentation.ubuntu.com/server/how-to/security/openssh-server/
-- VS Code Remote - SSH: https://code.visualstudio.com/docs/remote/ssh

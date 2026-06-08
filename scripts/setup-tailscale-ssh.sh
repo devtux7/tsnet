@@ -56,7 +56,7 @@ install_tailscale() {
 
 install_openssh_server() {
   log "Installing OpenSSH server."
-  apt_install openssh-server ca-certificates curl ufw
+  apt_install openssh-server
 
   log "Enabling ssh service."
   $SUDO systemctl enable --now ssh
@@ -195,17 +195,20 @@ tailscale_up() {
     log "Tailscale is already authenticated."
   fi
 
-  if [[ "${ENABLE_TAILSCALE_SSH:-false}" == "true" ]]; then
-    log "Enabling Tailscale SSH."
-    $SUDO tailscale set --ssh
-  fi
+}
+
+enable_tailscale_ssh() {
+  log "Enabling Tailscale SSH."
+  $SUDO tailscale set --ssh
 }
 
 print_summary() {
+  local access_mode
   local user_name
   local ts_ipv4
   local host_name
 
+  access_mode="${SSH_ACCESS_MODE:-tailscale}"
   user_name="${SUDO_USER:-$USER}"
   ts_ipv4="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
   host_name="$(hostname)"
@@ -215,14 +218,29 @@ print_summary() {
   printf '\n'
 
   if [[ -n "${ts_ipv4}" ]]; then
-    printf 'Terminal SSH:\n'
+    case "$access_mode" in
+      openssh)
+        printf 'OpenSSH terminal access:\n'
+        ;;
+      both)
+        printf 'Tailscale SSH terminal access (OpenSSH also configured):\n'
+        ;;
+      *)
+        printf 'Tailscale SSH terminal access:\n'
+        ;;
+    esac
     printf '  ssh %s@%s\n' "$user_name" "$ts_ipv4"
     printf '\n'
-    printf 'VS Code Remote - SSH config example:\n'
-    printf '  Host %s\n' "$host_name"
-    printf '    HostName %s\n' "$ts_ipv4"
-    printf '    User %s\n' "$user_name"
-    printf '    Port 22\n'
+    if [[ "$access_mode" == "openssh" ]]; then
+      printf 'VS Code Remote - SSH config example:\n'
+      printf '  Host %s\n' "$host_name"
+      printf '    HostName %s\n' "$ts_ipv4"
+      printf '    User %s\n' "$user_name"
+      printf '    Port 22\n'
+    else
+      printf 'VS Code:\n'
+      printf '  Use the Tailscale VS Code extension, or connect with Remote - SSH after Tailscale SSH is allowed by your tailnet policy.\n'
+    fi
   else
     printf 'Tailscale is installed, but no Tailscale IPv4 address was detected yet.\n'
     printf 'Authenticate with:\n'
@@ -233,21 +251,50 @@ print_summary() {
   printf '\n'
   printf 'Useful checks:\n'
   printf '  tailscale status\n'
-  printf '  systemctl status ssh\n'
+  printf '  tailscale debug prefs\n'
+  if [[ "$access_mode" == "openssh" || "$access_mode" == "both" ]]; then
+    printf '  systemctl status ssh\n'
+  fi
 }
 
 main() {
+  local ssh_access_mode
+
   require_root_or_sudo
   detect_os
 
+  ssh_access_mode="${SSH_ACCESS_MODE:-tailscale}"
+
   log "Installing base dependencies."
-  apt_install ca-certificates curl
+  apt_install ca-certificates curl ufw
 
   install_tailscale
-  install_openssh_server
   tailscale_up
-  configure_authorized_keys
-  configure_sshd
+
+  case "$ssh_access_mode" in
+    tailscale)
+      enable_tailscale_ssh
+      ;;
+    openssh)
+      install_openssh_server
+      configure_authorized_keys
+      configure_sshd
+      if [[ "${ENABLE_TAILSCALE_SSH:-false}" == "true" ]]; then
+        enable_tailscale_ssh
+      fi
+      ;;
+    both)
+      enable_tailscale_ssh
+      install_openssh_server
+      configure_authorized_keys
+      configure_sshd
+      ;;
+    *)
+      printf 'Unsupported SSH_ACCESS_MODE: %s. Use tailscale, openssh, or both.\n' "$ssh_access_mode" >&2
+      exit 1
+      ;;
+  esac
+
   configure_firewall
   print_summary
 }
