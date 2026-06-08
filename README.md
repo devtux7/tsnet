@@ -60,6 +60,20 @@ bash scripts/setup-tailscale-ssh.sh
 
 Script `sudo` isteyebilir.
 
+## GitHub'a Public Repo Olarak Yayinlama
+
+GitHub CLI kurulu ve login yapilmis bir makinede:
+
+```bash
+REPO_NAME=orbstack-ubuntu-tailscale-ssh bash scripts/publish-to-github.sh
+```
+
+Script `gh repo create --public --source=. --remote=origin --push` akisini kullanir. Bu ortamda `gh` yoksa once GitHub CLI kurun ve login olun:
+
+```bash
+gh auth login
+```
+
 ## Script Ne Yapar?
 
 - Ubuntu oldugunu kontrol eder.
