@@ -158,6 +158,8 @@ configure_authorized_keys() {
 }
 
 configure_firewall() {
+  local cidr
+  local orbstack_cidrs
   local remote_ip
 
   if [[ "${LOCKDOWN_SSH_TO_TAILSCALE:-true}" != "true" ]]; then
@@ -174,8 +176,15 @@ configure_firewall() {
   fi
 
   log "Restricting SSH to the tailscale0 interface with UFW."
+  if [[ "${ALLOW_ORBSTACK_HOST_SSH:-true}" == "true" ]]; then
+    orbstack_cidrs="${ORBSTACK_SSH_ALLOW_CIDRS:-198.19.0.0/16}"
+    for cidr in $orbstack_cidrs; do
+      log "Allowing SSH from OrbStack host/bridge network ${cidr}."
+      $SUDO ufw insert 1 allow in proto tcp from "$cidr" to any port 22 comment 'Allow SSH from OrbStack host'
+    done
+  fi
   $SUDO ufw insert 1 allow in on tailscale0 proto tcp to any port 22 comment 'Allow SSH over Tailscale'
-  $SUDO ufw insert 2 deny in proto tcp to any port 22 comment 'Deny SSH outside Tailscale'
+  $SUDO ufw insert 3 deny in proto tcp to any port 22 comment 'Deny SSH outside Tailscale'
   $SUDO ufw --force enable
 }
 

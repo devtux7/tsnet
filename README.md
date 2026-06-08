@@ -83,6 +83,8 @@ The script may ask for `sudo`.
 | `TAILSCALE_LOGIN_QR` | `true` | Shows a QR code for the Tailscale login URL when the installed Tailscale CLI supports it. |
 | `TAILSCALE_QR_FORMAT` | `small` | QR code format passed to `tailscale up --qr-format`. Use `small` or `large`. |
 | `LOCKDOWN_SSH_TO_TAILSCALE` | `true` | Restricts SSH to the Tailscale interface with UFW. |
+| `ALLOW_ORBSTACK_HOST_SSH` | `true` | Keeps local SSH from the macOS OrbStack host/bridge network working. |
+| `ORBSTACK_SSH_ALLOW_CIDRS` | `198.19.0.0/16` | Space-separated CIDRs allowed for local OrbStack host/bridge SSH. |
 | `FORCE_LOCKDOWN` | `false` | Applies the firewall restriction even when the script is running from a non-Tailscale SSH session. |
 
 Classic OpenSSH mode supports these additional variables:
@@ -158,7 +160,7 @@ OpenSSH mode is useful when a tool specifically needs the host OpenSSH server. F
 
 - Do not enable empty-password OpenSSH. Use Tailscale SSH for passwordless access.
 - Tailscale SSH access depends on your tailnet SSH policy.
-- The script applies UFW rules that allow `22/tcp` on `tailscale0` and deny `22/tcp` elsewhere.
+- The script applies UFW rules that allow `22/tcp` on `tailscale0`, preserve local OrbStack host access by default, and deny other `22/tcp` traffic.
 - Use Tailscale ACLs and SSH rules to limit which users and devices can access the VM.
 - If OrbStack has `Expose ports to LAN` enabled, services listening on `0.0.0.0` may be visible from the LAN. This script applies a UFW restriction for SSH.
 
@@ -194,7 +196,14 @@ SSH timeout:
 - Is the other device signed in to Tailscale?
 - Is the VM online in `tailscale status`?
 - Does `sudo ufw status verbose` show the `tailscale0` allow rule?
+- If connecting from the macOS OrbStack host, does `sudo ufw status numbered` show an allow rule from `198.19.0.0/16` above the SSH deny rule?
 - Do your Tailscale ACLs allow `22/tcp` access?
+
+Local OrbStack host SSH stopped working:
+
+- Re-run the script so it inserts the OrbStack host allow rule above the deny rule.
+- Keep `ALLOW_ORBSTACK_HOST_SSH=true`, or set `ORBSTACK_SSH_ALLOW_CIDRS` if your OrbStack bridge CIDR is different.
+- OrbStack also provides its own local SSH proxy with `ssh orb`.
 
 Wrong username:
 
