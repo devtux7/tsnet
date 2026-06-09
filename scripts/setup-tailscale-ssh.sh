@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+  BOLD_GREEN=$'\033[1;32m'
+  RESET=$'\033[0m'
+else
+  BOLD_GREEN=""
+  RESET=""
+fi
+
 log() {
   printf '\n[setup] %s\n' "$*"
+}
+
+done_step() {
+  printf '%s[done]%s %s\n' "$BOLD_GREEN" "$RESET" "$*"
 }
 
 warn() {
@@ -40,18 +52,23 @@ detect_os() {
 
 apt_install() {
   local packages=("$@")
+
+  log "Installing packages: ${packages[*]}"
   $SUDO apt-get update
   $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
+  done_step "Installed packages: ${packages[*]}"
 }
 
 install_tailscale() {
   if need_cmd tailscale; then
     log "Tailscale already installed."
+    done_step "Tailscale is available."
     return
   fi
 
   log "Installing Tailscale with the official install script."
   curl -fsSL https://tailscale.com/install.sh | $SUDO sh
+  done_step "Tailscale installed."
 }
 
 tailscale_up_supports_qr() {
@@ -64,6 +81,7 @@ install_openssh_server() {
 
   log "Enabling ssh service."
   $SUDO systemctl enable --now ssh
+  done_step "OpenSSH service enabled."
 }
 
 configure_sshd() {
@@ -91,6 +109,7 @@ configure_sshd() {
   fi
 
   $SUDO systemctl restart ssh
+  done_step "SSH hardening config applied."
 }
 
 is_tailscale_ipv4() {
@@ -155,6 +174,7 @@ configure_authorized_keys() {
   $SUDO mv "${auth_file}.tmp" "$auth_file"
   $SUDO chown "$target_user:$primary_group" "$auth_file"
   $SUDO chmod 600 "$auth_file"
+  done_step "Authorized keys configured for ${target_user}."
 }
 
 configure_firewall() {
@@ -186,6 +206,7 @@ configure_firewall() {
   $SUDO ufw insert 1 allow in on tailscale0 proto tcp to any port 22 comment 'Allow SSH over Tailscale'
   $SUDO ufw insert 3 deny in proto tcp to any port 22 comment 'Deny SSH outside Tailscale'
   $SUDO ufw --force enable
+  done_step "Firewall rules applied."
 }
 
 tailscale_up() {
@@ -211,11 +232,14 @@ tailscale_up() {
 
     log "Running tailscale up. Open the printed Tailscale login URL, or scan the QR code if shown."
     $SUDO tailscale up "${login_args[@]}"
+    done_step "Tailscale authenticated."
   elif [[ "${#args[@]}" -gt 0 ]]; then
     log "Tailscale is already authenticated; applying requested tailscale up options."
     $SUDO tailscale up "${args[@]}"
+    done_step "Tailscale options applied."
   else
     log "Tailscale is already authenticated."
+    done_step "Tailscale is online."
   fi
 
 }
@@ -223,6 +247,7 @@ tailscale_up() {
 enable_tailscale_ssh() {
   log "Enabling Tailscale SSH."
   $SUDO tailscale set --ssh
+  done_step "Tailscale SSH enabled."
 }
 
 print_summary() {
@@ -319,6 +344,7 @@ main() {
   esac
 
   configure_firewall
+  done_step "Setup tasks completed."
   print_summary
 }
 

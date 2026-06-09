@@ -86,6 +86,7 @@ The script may ask for `sudo`.
 | `ALLOW_ORBSTACK_HOST_SSH` | `true` | Keeps local SSH from the macOS OrbStack host/bridge network working. |
 | `ORBSTACK_SSH_ALLOW_CIDRS` | `198.19.0.0/16` | Space-separated CIDRs allowed for local OrbStack host/bridge SSH. |
 | `FORCE_LOCKDOWN` | `false` | Applies the firewall restriction even when the script is running from a non-Tailscale SSH session. |
+| `NO_COLOR` | Empty | Disables colored output when set. |
 
 Classic OpenSSH mode supports these additional variables:
 
