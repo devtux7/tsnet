@@ -1,5 +1,5 @@
 # modules/utils.sh
-# General utility functions for setup-tailscale-ssh.sh
+# General utility functions for ubuntu.sh
 
 log() {
   printf '\n[setup] %s\n' "$*"

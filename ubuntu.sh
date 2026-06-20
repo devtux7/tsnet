@@ -13,18 +13,16 @@ fi
 GITHUB_USER="devtux7"
 GITHUB_REPO="tsnet"
 GITHUB_BRANCH="main"
-BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_REPO/$GITHUB_BRANCH/scripts/modules"
+BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_REPO/$GITHUB_BRANCH/modules"
 
 if [[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/modules" ]]; then
   MODULES_DIR="$SCRIPT_DIR/modules"
-elif [[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/scripts/modules" ]]; then
-  MODULES_DIR="$SCRIPT_DIR/scripts/modules"
 else
   # Remote run: download modules to mktemp folder
   MODULES_DIR="$(mktemp -d)"
   trap 'rm -rf "$MODULES_DIR"' EXIT
 
-  MODULES=("utils.sh" "sysctl.sh" "firewall.sh" "tailscale.sh")
+  MODULES=("utils.sh" "sysctl.sh" "firewall.sh" "tailscale.sh" "wireguard.sh")
   
   if ! command -v curl >/dev/null 2>&1; then
     printf 'Error: curl is required to fetch script modules.\n' >&2
@@ -48,17 +46,16 @@ source "$MODULES_DIR/sysctl.sh"
 source "$MODULES_DIR/firewall.sh"
 # shellcheck disable=SC1090
 source "$MODULES_DIR/tailscale.sh"
+# shellcheck disable=SC1090
+source "$MODULES_DIR/wireguard.sh"
 
 # =============================================================================
-# MAIN ORCHESTRATION
+# FLOWS
 # =============================================================================
 
-main() {
+setup_tailscale_flow() {
   local exit_node
   local optimize
-
-  require_root_or_sudo
-  detect_os
 
   # Environment variables with default values
   exit_node="${TAILSCALE_EXIT_NODE:-true}"
@@ -87,6 +84,65 @@ main() {
 
   # Print final instructions
   print_summary "$exit_node"
+}
+
+setup_wireguard_flow() {
+  setup_wireguard_placeholder
+}
+
+# =============================================================================
+# INTERACTIVE MENU
+# =============================================================================
+
+show_menu() {
+  local opt
+  while true; do
+    printf '\n'
+    printf '=============================================\n'
+    printf '           Ubuntu Setup Menu                 \n'
+    printf '=============================================\n'
+    printf '1) Install Tailscale (SSH & Exit Node)\n'
+    printf '2) Install Wireguard (Placeholder)\n'
+    printf '3) Exit\n'
+    printf '=============================================\n'
+    
+    # Read from /dev/tty to support interactive prompts when piped with curl | bash
+    if read -p "Select an option [1-3]: " opt < /dev/tty; then
+      printf '\n'
+      case "$opt" in
+        1)
+          setup_tailscale_flow
+          break
+          ;;
+        2)
+          setup_wireguard_flow
+          break
+          ;;
+        3)
+          printf "Exiting...\n"
+          exit 0
+          ;;
+        *)
+          printf "Invalid option. Please try again.\n"
+          ;;
+      esac
+    else
+      # If reading from /dev/tty fails (non-interactive environment), default to Tailscale installation
+      warn "Non-interactive environment detected. Defaulting to Option 1: Tailscale."
+      setup_tailscale_flow
+      break
+    fi
+  done
+}
+
+# =============================================================================
+# MAIN ORCHESTRATION
+# =============================================================================
+
+main() {
+  require_root_or_sudo
+  detect_os
+  show_menu
 }
 
 main "$@"

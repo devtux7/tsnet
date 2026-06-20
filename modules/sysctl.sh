@@ -5,7 +5,7 @@ configure_ip_forwarding() {
   log "Configuring IP forwarding (required for Exit Node)..."
   
   {
-    printf '# Managed by setup-tailscale-ssh.sh\n'
+    printf '# Managed by ubuntu.sh\n'
     printf 'net.ipv4.ip_forward = 1\n'
     printf 'net.ipv6.conf.all.forwarding = 1\n'
   } | $SUDO tee /etc/sysctl.d/99-tailscale-forwarding.conf >/dev/null
@@ -17,7 +17,7 @@ optimize_network_buffers() {
   log "Optimizing network buffers and TCP performance for high throughput..."
 
   {
-    printf '# Managed by setup-tailscale-ssh.sh\n'
+    printf '# Managed by ubuntu.sh\n'
     # Enable BBR congestion control
     printf 'net.core.default_qdisc = fq\n'
     printf 'net.ipv4.tcp_congestion_control = bbr\n'

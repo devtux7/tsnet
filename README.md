@@ -1,26 +1,13 @@
-# OrbStack Ubuntu Tailscale SSH & Exit Node Setup
+# OrbStack Ubuntu Setup Script
 
-This repository provides a one-command setup script for accessing an OrbStack Ubuntu VM over Tailscale SSH, configuring it as a high-performance **Tailscale Exit Node (VPN)**, and applying critical network throughput/latency optimizations.
+This repository provides a modular, interactive setup script (`ubuntu.sh`) for installing packages, configuring network settings, and setting up VPN connections like **Tailscale SSH & Exit Nodes**.
 
-The default setup uses Tailscale SSH and configures the VM as a high-performance exit node.
+## Features
 
-The goal is to:
-
-- Reach the VM from another trusted device in your tailnet.
-- Use the VM as a secure VPN/Exit Node for all internet traffic.
-- Apply Linux sysctl optimizations (including BBR congestion control) to eliminate network bottlenecks.
-- Avoid router or modem port forwarding.
-- Avoid exposing port 22 to the public internet.
-
-## Overview
-
-If the other device is connected to the same Tailscale network (tailnet), it can SSH to the Ubuntu VM by using the VM's Tailscale IP address:
-
-```bash
-ssh user@100.x.y.z
-```
-
-With Tailscale SSH enabled, the SSH client still speaks the SSH protocol, but Tailscale handles the authentication step. Access is controlled by your tailnet's SSH policy.
+- **Interactive Menu**: Choose what software or configurations to apply.
+- **Tailscale SSH & Exit Node**: Reach your VM securely, use it as a high-speed VPN/Exit Node, and authenticate with Tailscale SSH.
+- **Network Buffers & BBR Tuning**: Fine-tune TCP buffer sizes and TCP congestion control (BBR) to prevent network bottlenecks.
+- **Firewall Integration**: Automatically restricts SSH to Tailscale interfaces while keeping local OrbStack host connectivity working.
 
 ## Architecture
 
@@ -35,31 +22,39 @@ Other device
 
 ## Modular Structure
 
-Following the modular design pattern, the project is divided into dedicated scripts under the `scripts/modules/` directory:
+The project is structured with modularity in mind under the `modules/` directory:
 
-- **[setup-tailscale-ssh.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/scripts/setup-tailscale-ssh.sh)**: Main orchestrator script. Supports both local running and remote running (`curl | bash`) by automatically loading submodules.
-- **[utils.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/scripts/modules/utils.sh)**: General helper utilities (OS detection, package installer wrapper, root privilege checks).
-- **[sysctl.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/scripts/modules/sysctl.sh)**: Configures IP forwarding (`net.ipv4.ip_forward=1`) and optimizes network buffers, BBR congestion control, TCP window scaling, and interface queue backlogs to avoid bottlenecks.
-- **[firewall.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/scripts/modules/firewall.sh)**: Restricts SSH port 22 to the `tailscale0` interface and configures UFW's default forward policy to `ACCEPT` so routed VPN traffic flows correctly. Also preserves OrbStack macOS host local connectivity.
-- **[tailscale.sh](file:///Users/serkan/Developer/Tailscale/tailscale.sh)**: Installs Tailscale, registers the device with custom settings (SSH, exit node advertisement, login QR code), and displays setup summaries.
+- **[ubuntu.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/ubuntu.sh)**: Main orchestrator script. Displays the interactive menu, handles arguments, and sources modules. Supports both local running and remote running (`curl | bash`).
+- **[modules/utils.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/utils.sh)**: General helper utilities (OS detection, package installer wrapper, root privilege checks).
+- **[modules/sysctl.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/sysctl.sh)**: Configures IP forwarding (`net.ipv4.ip_forward=1`) and applies TCP buffers, Google BBR congestion control, TCP window scaling, and interface queue backlogs to avoid bottlenecks.
+- **[modules/firewall.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/firewall.sh)**: Restricts SSH port 22 to the `tailscale0` interface and configures UFW's default forward policy to `ACCEPT`. Also preserves OrbStack macOS host local connectivity.
+- **[modules/tailscale.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/tailscale.sh)**: Installs Tailscale, registers the device with custom settings (SSH, exit node advertisement, login QR code), and displays setup summaries.
+- **[modules/wireguard.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/wireguard.sh)**: Placeholder for future Wireguard VPN configurations.
 
 ## One-Command Setup
 
 Run this inside the Ubuntu VM:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | bash
+curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/ubuntu.sh | bash
 ```
 
-To configure with specific settings (e.g. customized hostname):
+To bypass raw GitHub CDN caches instantly (useful after commits):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/devtux7/tsnet/main/scripts/setup-tailscale-ssh.sh | TAILSCALE_HOSTNAME=my-vpn-node bash
+curl -fsSL "https://raw.githubusercontent.com/devtux7/tsnet/main/ubuntu.sh?$(date +%s)" | bash
 ```
+
+## Interactive Choices
+
+Upon running the script, you will be prompted with a choice:
+1) **Install Tailscale (SSH & Exit Node)**: Fully installs and configures Tailscale, activates SSH and Exit Node parameters, and runs firewall lockdown.
+2) **Install Wireguard (Placeholder)**: Planned for future Wireguard VPN setups.
+3) **Exit**: Safely exits the installer.
 
 ## Environment Variables
 
-You can customize the script's behavior using the following environment variables:
+When choosing **Tailscale** (Option 1), you can customize behavior using the following environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
@@ -83,7 +78,7 @@ To avoid bandwidth bottlenecks during high VPN usage, the script automatically a
 
 ## Exit Node Activation (Crucial Step)
 
-After running the script, you **must approve** the exit node in your Tailscale Admin Console:
+After running the Tailscale installation flow, you **must approve** the exit node in your Tailscale Admin Console:
 
 1. Open the [Tailscale Admin Console](https://login.tailscale.com/admin/machines).
 2. Find your device, click the **three dots** icon next to it, and select **Edit route settings**.
