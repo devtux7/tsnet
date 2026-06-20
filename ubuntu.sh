@@ -61,6 +61,9 @@ setup_tailscale_flow() {
   exit_node="${TAILSCALE_EXIT_NODE:-true}"
   optimize="${TAILSCALE_OPTIMIZE:-true}"
 
+  # Run system package list update before starting
+  update_system_packages
+
   log "Installing base dependencies..."
   apt_install ca-certificates curl ufw
 
@@ -98,13 +101,13 @@ show_menu() {
   local opt
   while true; do
     printf '\n'
-    printf '=============================================\n'
-    printf '           Ubuntu Setup Menu                 \n'
-    printf '=============================================\n'
-    printf '1) Install Tailscale (SSH & Exit Node)\n'
-    printf '2) Install Wireguard (Placeholder)\n'
-    printf '3) Exit\n'
-    printf '=============================================\n'
+    printf '%b=============================================%b\n' "${GREEN}" "${NC}"
+    printf '%b     💻   Ubuntu Setup Menu                  %b\n' "${BOLD_GREEN}" "${NC}"
+    printf '%b=============================================%b\n' "${GREEN}" "${NC}"
+    printf '%b1)%b Install Tailscale (SSH & Exit Node)\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b2)%b Install Wireguard (Placeholder)\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b3)%b Exit\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b=============================================%b\n' "${GREEN}" "${NC}"
     
     # Read from /dev/tty to support interactive prompts when piped with curl | bash
     if read -p "Select an option [1-3]: " opt < /dev/tty; then
@@ -123,7 +126,7 @@ show_menu() {
           exit 0
           ;;
         *)
-          printf "Invalid option. Please try again.\n"
+          printf "%bInvalid option. Please try again.%b\n" "${RED}" "${NC}"
           ;;
       esac
     else

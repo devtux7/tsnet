@@ -67,27 +67,27 @@ print_summary() {
   ts_ipv4="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
 
   printf '\n'
-  printf 'Setup complete.\n'
+  printf '%b🎉 Setup complete!%b\n' "${BOLD_GREEN}" "${NC}"
   printf '\n'
 
   if [[ -n "${ts_ipv4}" ]]; then
     printf 'Tailscale SSH terminal access:\n'
-    printf '  ssh %s@%s\n' "$user_name" "$ts_ipv4"
+    printf '  %bssh %s@%s%b\n' "${BOLD_GREEN}" "$user_name" "$ts_ipv4" "${NC}"
     printf '\n'
     
     if [[ "$exit_node_enabled" == "true" ]]; then
-      printf 'Exit Node Active:\n'
-      printf '  Please open your Tailscale Admin Console and approve this machine as an Exit Node.\n'
-      printf '  Admin Console: https://login.tailscale.com/admin/machines\n'
+      printf '%b🔑 Exit Node Active:%b\n' "${BOLD_YELLOW}" "${NC}"
+      printf '  %bPlease open your Tailscale Admin Console and approve this machine as an Exit Node.%b\n' "${BOLD_YELLOW}" "${NC}"
+      printf '  Admin Console: %bhttps://login.tailscale.com/admin/machines%b\n' "${CYAN}" "${NC}"
       printf '\n'
     fi
 
     printf 'VS Code:\n'
     printf '  Use the Tailscale VS Code extension, or connect with Remote - SSH after Tailscale SSH is allowed by your tailnet policy.\n'
   else
-    printf 'Tailscale is installed, but no Tailscale IPv4 address was detected yet.\n'
+    printf '%bTailscale is installed, but no Tailscale IPv4 address was detected yet.%b\n' "${BOLD_RED}" "${NC}"
     printf 'Authenticate with:\n'
-    printf '  sudo tailscale up\n'
+    printf '  %bsudo tailscale up%b\n' "${BOLD_CYAN}" "${NC}"
     printf 'Then rerun this script.\n'
   fi
 

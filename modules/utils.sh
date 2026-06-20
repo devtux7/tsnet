@@ -1,12 +1,28 @@
 # modules/utils.sh
 # General utility functions for ubuntu.sh
 
+# ANSI Color Codes
+NC='\033[0m' # No Color
+GREEN='\033[0;32m'
+BOLD_GREEN='\033[1;32m'
+YELLOW='\033[0;33m'
+BOLD_YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BOLD_RED='\033[1;31m'
+CYAN='\033[0;36m'
+BOLD_CYAN='\033[1;36m'
+
 log() {
-  printf '\n[setup] %s\n' "$*"
+  printf '\n%b🚀 [setup] %s%b\n' "${GREEN}" "$*" "${NC}"
 }
 
 warn() {
-  printf '\n[warning] %s\n' "$*" >&2
+  printf '\n%b⚠️ [warning] %s%b\n' "${YELLOW}" "$*" "${NC}" >&2
+}
+
+error() {
+  printf '\n%b❌ [error] %s%b\n' "${RED}" "$*" "${NC}" >&2
+  exit 1
 }
 
 need_cmd() {
@@ -38,8 +54,12 @@ detect_os() {
   fi
 }
 
+update_system_packages() {
+  log "Updating Ubuntu package lists (apt-get update)..."
+  $SUDO apt-get update
+}
+
 apt_install() {
   local packages=("$@")
-  $SUDO apt-get update
   $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}"
 }
