@@ -10,7 +10,16 @@ configure_ip_forwarding() {
     printf 'net.ipv6.conf.all.forwarding = 1\n'
   } | $SUDO tee /etc/sysctl.d/99-tailscale-forwarding.conf >/dev/null
 
-  $SUDO sysctl -p /etc/sysctl.d/99-tailscale-forwarding.conf >/dev/null || warn "Failed to apply IP forwarding sysctl parameters automatically. Reboot may be required."
+  # Apply each parameter individually
+  local key val
+  while IFS=' = ' read -r key val; do
+    [[ -z "$key" || "$key" =~ ^# ]] && continue
+    key="$(echo "$key" | xargs)"
+    val="$(echo "$val" | xargs)"
+    if ! $SUDO sysctl -w "${key}=${val}" >/dev/null 2>&1; then
+      warn "Failed to enable '${key}'. Packets might not route correctly."
+    fi
+  done < /etc/sysctl.d/99-tailscale-forwarding.conf
 }
 
 optimize_network_buffers() {
@@ -37,8 +46,17 @@ optimize_network_buffers() {
     printf 'net.ipv4.tcp_window_scaling = 1\n'
   } | $SUDO tee /etc/sysctl.d/99-tailscale-network-tuning.conf >/dev/null
 
-  # Attempt to load the BBR module if not built-in, though on modern Ubuntu it usually is built-in or auto-loaded
+  # Attempt to load the BBR module
   $SUDO modprobe tcp_bbr 2>/dev/null || true
 
-  $SUDO sysctl -p /etc/sysctl.d/99-tailscale-network-tuning.conf >/dev/null || warn "Failed to apply network tuning sysctl parameters automatically. Reboot may be required."
+  # Apply each parameter individually so if one fails, others still apply
+  local key val
+  while IFS=' = ' read -r key val; do
+    [[ -z "$key" || "$key" =~ ^# ]] && continue
+    key="$(echo "$key" | xargs)"
+    val="$(echo "$val" | xargs)"
+    if ! $SUDO sysctl -w "${key}=${val}" >/dev/null 2>&1; then
+      warn "Kernel configuration '${key}' is not supported by your system; skipping."
+    fi
+  done < /etc/sysctl.d/99-tailscale-network-tuning.conf
 }

@@ -46,7 +46,15 @@ tailscale_up() {
     fi
 
     log "Running tailscale up. Open the printed Tailscale login URL, or scan the QR code if shown."
-    $SUDO tailscale up "${login_args[@]}"
+    
+    # Run tailscale up and pipe output to real-time colorizer for the login link
+    $SUDO tailscale up "${login_args[@]}" 2>&1 | while read -r line; do
+      if [[ "$line" =~ https://login.tailscale.com/a/ ]]; then
+        printf '%b%s%b\n' "${CYAN}" "$line" "${NC}"
+      else
+        printf '%s\n' "$line"
+      fi
+    done
   else
     log "Tailscale is already authenticated; applying requested options..."
     $SUDO tailscale up "${args[@]}"
