@@ -5,15 +5,19 @@ set -Eeuo pipefail
 # MODULAR MODULE LOADER (Supports local execution and curl | bash)
 # =============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR=""
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
 GITHUB_USER="devtux7"
 GITHUB_REPO="tsnet"
 GITHUB_BRANCH="main"
 BASE_URL="https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_REPO/$GITHUB_BRANCH/scripts/modules"
 
-if [[ -d "$SCRIPT_DIR/modules" ]]; then
+if [[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/modules" ]]; then
   MODULES_DIR="$SCRIPT_DIR/modules"
-elif [[ -d "$SCRIPT_DIR/scripts/modules" ]]; then
+elif [[ -n "$SCRIPT_DIR" && -d "$SCRIPT_DIR/scripts/modules" ]]; then
   MODULES_DIR="$SCRIPT_DIR/scripts/modules"
 else
   # Remote run: download modules to mktemp folder
