@@ -58,6 +58,12 @@ is_orbstack() {
   if [[ -f /run/orbstack || -d /etc/orbstack || -d /mnt/mac ]]; then
     return 0
   fi
+  if uname -r | grep -q -i "orbstack"; then
+    return 0
+  fi
+  if grep -q -i "orbstack" /proc/version 2>/dev/null; then
+    return 0
+  fi
   return 1
 }
 
