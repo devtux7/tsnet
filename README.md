@@ -48,8 +48,8 @@ curl -fsSL "https://raw.githubusercontent.com/devtux7/tsnet/main/ubuntu.sh?$(dat
 ## Interactive Choices
 
 Upon running the script, you will be prompted with a choice:
-1) **Install Tailscale (SSH & Exit Node)**: Fully installs and configures Tailscale, activates SSH and Exit Node parameters, and runs firewall lockdown.
-2) **Install Wireguard (Placeholder)**: Planned for future Wireguard VPN setups.
+1) ** Tailscale Install (SSH & Exit Node)**: Fully installs and configures Tailscale, activates SSH and Exit Node parameters, and runs firewall lockdown.
+2) ** Wireguard Install (Placeholder)**: Planned for future Wireguard VPN setups.
 3) **Exit**: Safely exits the installer.
 
 ## Environment Variables

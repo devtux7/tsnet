@@ -54,6 +54,13 @@ detect_os() {
   fi
 }
 
+is_orbstack() {
+  if [[ -f /run/orbstack || -d /etc/orbstack || -d /mnt/mac ]]; then
+    return 0
+  fi
+  return 1
+}
+
 update_system_packages() {
   log "Updating Ubuntu package lists (apt-get update)..."
   $SUDO apt-get update

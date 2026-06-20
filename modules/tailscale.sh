@@ -17,6 +17,7 @@ install_tailscale() {
 
 tailscale_up() {
   local exit_node_enabled="${1:-false}"
+  local ssh_enabled="${2:-true}"
   local args=()
   local login_args=()
   local ts_ipv4
@@ -30,8 +31,10 @@ tailscale_up() {
     args+=(--advertise-exit-node)
   fi
 
-  # Enable Tailscale SSH
-  args+=(--ssh)
+  if [[ "$ssh_enabled" == "true" ]]; then
+    log "Enabling Tailscale SSH support..."
+    args+=(--ssh)
+  fi
 
   ts_ipv4="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
 
@@ -68,6 +71,7 @@ enable_tailscale_ssh() {
 
 print_summary() {
   local exit_node_enabled="${1:-false}"
+  local ssh_enabled="${2:-true}"
   local user_name
   local ts_ipv4
 
@@ -79,9 +83,11 @@ print_summary() {
   printf '\n'
 
   if [[ -n "${ts_ipv4}" ]]; then
-    printf 'Tailscale SSH terminal access:\n'
-    printf '  %bssh %s@%s%b\n' "${BOLD_GREEN}" "$user_name" "$ts_ipv4" "${NC}"
-    printf '\n'
+    if [[ "$ssh_enabled" == "true" ]]; then
+      printf 'Tailscale SSH terminal access:\n'
+      printf '  %bssh %s@%s%b\n' "${BOLD_GREEN}" "$user_name" "$ts_ipv4" "${NC}"
+      printf '\n'
+    fi
     
     if [[ "$exit_node_enabled" == "true" ]]; then
       printf '%b🔑 Exit Node Active:%b\n' "${BOLD_YELLOW}" "${NC}"
@@ -90,8 +96,10 @@ print_summary() {
       printf '\n'
     fi
 
-    printf 'VS Code:\n'
-    printf '  Use the Tailscale VS Code extension, or connect with Remote - SSH after Tailscale SSH is allowed by your tailnet policy.\n'
+    if [[ "$ssh_enabled" == "true" ]]; then
+      printf 'VS Code:\n'
+      printf '  Use the Tailscale VS Code extension, or connect with Remote - SSH after Tailscale SSH is allowed by your tailnet policy.\n'
+    fi
   else
     printf '%bTailscale is installed, but no Tailscale IPv4 address was detected yet.%b\n' "${BOLD_RED}" "${NC}"
     printf 'Authenticate with:\n'

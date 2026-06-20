@@ -54,39 +54,108 @@ source "$MODULES_DIR/wireguard.sh"
 # =============================================================================
 
 setup_tailscale_flow() {
-  local exit_node
-  local optimize
+  local enable_ssh="false"
+  local enable_exit_node="false"
+  local enable_optimize="false"
+  local enable_ufw_lockdown="false"
+  local ans opt_ans
 
-  # Environment variables with default values
-  exit_node="${TAILSCALE_EXIT_NODE:-true}"
-  optimize="${TAILSCALE_OPTIMIZE:-true}"
+  printf '\n%b--- Tailscale Configuration Settings ---%b\n' "${BOLD_CYAN}" "${NC}"
 
-  # Run system package list update before starting
+  # 1. Tailscale SSH Option
+  if read -p "Do you want to enable Tailscale SSH? [Y/n]: " ans < /dev/tty; then
+    if [[ -z "$ans" || "$ans" =~ ^[yY](es)?$ ]]; then
+      enable_ssh="true"
+    fi
+  else
+    enable_ssh="true"
+  fi
+
+  # 2. Exit Node & Optimization Options
+  if read -p "Do you want to advertise this machine as an Exit Node (VPN)? [Y/n]: " ans < /dev/tty; then
+    if [[ -z "$ans" || "$ans" =~ ^[yY](es)?$ ]]; then
+      enable_exit_node="true"
+      
+      # Networking tunings
+      if read -p "Do you want to apply network performance/sysctl optimizations for Exit Node traffic? [Y/n]: " opt_ans < /dev/tty; then
+        if [[ -z "$opt_ans" || "$opt_ans" =~ ^[yY](es)?$ ]]; then
+          enable_optimize="true"
+        fi
+      else
+        enable_optimize="true"
+      fi
+    fi
+  else
+    enable_exit_node="true"
+    enable_optimize="true"
+  fi
+
+  # 3. Firewall Lockdown & Connection Analysis
+  local is_remote_ssh="false"
+  local remote_ip=""
+
+  if [[ -n "${SSH_CONNECTION:-}" ]]; then
+    remote_ip="${SSH_CONNECTION%% *}"
+    if ! is_tailscale_ipv4 "$remote_ip"; then
+      is_remote_ssh="true"
+    fi
+  fi
+
+  # Determine lockdown behavior
+  if [[ "${LOCKDOWN_SSH_TO_TAILSCALE:-true}" == "true" ]]; then
+    if is_orbstack; then
+      # OrbStack VMs always keep loopback/host bridge accessible, safe to enable
+      enable_ufw_lockdown="true"
+    elif [[ "$is_remote_ssh" == "true" ]]; then
+      # Remote Cloud VM over public SSH connection
+      printf '\n%b⚠️  WARNING: Enabling UFW firewall lockdown will immediately close port 22 on your public IP.%b\n' "${BOLD_YELLOW}" "${NC}"
+      printf 'Your current SSH connection will be disconnected, and you must reconnect using Tailscale SSH.\n'
+      if read -p "Do you want to enable UFW lockdown anyway? [y/N]: " ans < /dev/tty; then
+        if [[ "$ans" =~ ^[yY](es)?$ ]]; then
+          enable_ufw_lockdown="true"
+        fi
+      fi
+    else
+      # Local console execution or already using Tailscale SSH, safe to enable
+      enable_ufw_lockdown="true"
+    fi
+  fi
+
+  # ----------------------------------------
+  # RUN INSTALLATION FLOW
+  # ----------------------------------------
   update_system_packages
 
   log "Installing base dependencies..."
   apt_install ca-certificates curl ufw
 
   # Apply sysctl network optimizations
-  if [[ "$optimize" == "true" ]]; then
+  if [[ "$enable_optimize" == "true" ]]; then
     optimize_network_buffers
   fi
 
   # Apply IP forwarding if exit node is enabled
-  if [[ "$exit_node" == "true" ]]; then
+  if [[ "$enable_exit_node" == "true" ]]; then
     configure_ip_forwarding
   fi
 
   # Install and start Tailscale
   install_tailscale
-  tailscale_up "$exit_node"
-  enable_tailscale_ssh
+  tailscale_up "$enable_exit_node" "$enable_ssh"
+  
+  if [[ "$enable_ssh" == "true" ]]; then
+    enable_tailscale_ssh
+  fi
 
   # Configure firewall
-  configure_firewall "$exit_node"
+  if [[ "$enable_ufw_lockdown" == "true" ]]; then
+    configure_firewall "$enable_exit_node"
+  else
+    log "Skipping UFW firewall lockdown to preserve current public SSH connection."
+  fi
 
   # Print final instructions
-  print_summary "$exit_node"
+  print_summary "$enable_exit_node" "$enable_ssh"
 }
 
 setup_wireguard_flow() {
@@ -104,7 +173,7 @@ show_menu() {
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"
     printf '%b     💻   Ubuntu Setup Menu                  %b\n' "${BOLD_GREEN}" "${NC}"
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"
-    printf '%b1)%b Install Tailscale (SSH & Exit Node)\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b1)%b Install Tailscale (Interactive Options)\n' "${BOLD_CYAN}" "${NC}"
     printf '%b2)%b Install Wireguard (Placeholder)\n' "${BOLD_CYAN}" "${NC}"
     printf '%b3)%b Exit\n' "${BOLD_CYAN}" "${NC}"
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"

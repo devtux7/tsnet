@@ -12,6 +12,7 @@ is_tailscale_ipv4() {
 configure_firewall() {
   local remote_ip
   local exit_node_enabled="${1:-false}"
+  local allow_orbstack
 
   if [[ "${LOCKDOWN_SSH_TO_TAILSCALE:-true}" != "true" ]]; then
     log "Skipping firewall lockdown because LOCKDOWN_SSH_TO_TAILSCALE is not true."
@@ -28,7 +29,16 @@ configure_firewall() {
 
   log "Configuring UFW firewall rules..."
   
-  if [[ "${ALLOW_ORBSTACK_HOST_SSH:-true}" == "true" ]]; then
+  # Auto-detect OrbStack VM environment
+  if [[ -n "${ALLOW_ORBSTACK_HOST_SSH:-}" ]]; then
+    allow_orbstack="$ALLOW_ORBSTACK_HOST_SSH"
+  elif is_orbstack; then
+    allow_orbstack="true"
+  else
+    allow_orbstack="false"
+  fi
+
+  if [[ "$allow_orbstack" == "true" ]]; then
     local cidr
     local orbstack_cidrs="${ORBSTACK_SSH_ALLOW_CIDRS:-198.19.0.0/16}"
     for cidr in $orbstack_cidrs; do
