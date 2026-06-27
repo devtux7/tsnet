@@ -8,6 +8,7 @@ This repository provides a modular, interactive setup script (`ubuntu.sh`) for i
 - **Tailscale SSH & Exit Node**: Reach your VM securely, use it as a high-speed VPN/Exit Node, and authenticate with Tailscale SSH.
 - **Network Buffers & BBR Tuning**: Fine-tune TCP buffer sizes and TCP congestion control (BBR) to prevent network bottlenecks.
 - **Firewall Integration**: Automatically restricts SSH to Tailscale interfaces while keeping local OrbStack host connectivity working.
+- **Ubuntu Settings**: Sub-menu to configure system properties like changing the current Linux user password.
 
 ## Architecture
 
@@ -25,11 +26,12 @@ Other device
 The project is structured with modularity in mind under the `modules/` directory:
 
 - **[ubuntu.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/ubuntu.sh)**: Main orchestrator script. Displays the interactive menu, handles arguments, and sources modules. Supports both local running and remote running (`curl | bash`).
-- **[modules/utils.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/utils.sh)**: General helper utilities (OS detection, package installer wrapper, root privilege checks).
+- **[modules/utils.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/utils.sh)**: General helper utilities (OS detection, package installer wrapper, root privilege checks, OrbStack platform detection).
 - **[modules/sysctl.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/sysctl.sh)**: Configures IP forwarding (`net.ipv4.ip_forward=1`) and applies TCP buffers, Google BBR congestion control, TCP window scaling, and interface queue backlogs to avoid bottlenecks.
 - **[modules/firewall.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/firewall.sh)**: Restricts SSH port 22 to the `tailscale0` interface and configures UFW's default forward policy to `ACCEPT`. Also preserves OrbStack macOS host local connectivity.
 - **[modules/tailscale.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/tailscale.sh)**: Installs Tailscale, registers the device with custom settings (SSH, exit node advertisement, login QR code), and displays setup summaries.
 - **[modules/wireguard.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/wireguard.sh)**: Placeholder for future Wireguard VPN configurations.
+- **[modules/settings.sh](file:///Users/serkan/Developer/Tailscale/tailSSH/modules/settings.sh)**: System settings adjustments, beginning with the Password Change utility.
 
 ## One-Command Setup
 
@@ -48,9 +50,11 @@ curl -fsSL "https://raw.githubusercontent.com/devtux7/tsnet/main/ubuntu.sh?$(dat
 ## Interactive Choices
 
 Upon running the script, you will be prompted with a choice:
-1) ** Tailscale Install (SSH & Exit Node)**: Fully installs and configures Tailscale, activates SSH and Exit Node parameters, and runs firewall lockdown.
-2) ** Wireguard Install (Placeholder)**: Planned for future Wireguard VPN setups.
-3) **Exit**: Safely exits the installer.
+1) **Install Tailscale (Interactive Options)**: Fully installs and configures Tailscale, activates SSH and Exit Node parameters, and runs firewall lockdown.
+2) **Install Wireguard (Placeholder)**: Planned for future Wireguard VPN setups.
+3) **Ubuntu Settings**: Sub-menu with configuration tools:
+   - **Change Password**: Interactively update the password of the invoking user.
+4) **Exit**: Safely exits the installer.
 
 ## Environment Variables
 

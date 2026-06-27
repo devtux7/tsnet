@@ -22,7 +22,7 @@ else
   MODULES_DIR="$(mktemp -d)"
   trap 'rm -rf "$MODULES_DIR"' EXIT
 
-  MODULES=("utils.sh" "sysctl.sh" "firewall.sh" "tailscale.sh" "wireguard.sh")
+  MODULES=("utils.sh" "sysctl.sh" "firewall.sh" "tailscale.sh" "wireguard.sh" "settings.sh")
   
   if ! command -v curl >/dev/null 2>&1; then
     printf 'Error: curl is required to fetch script modules.\n' >&2
@@ -48,6 +48,8 @@ source "$MODULES_DIR/firewall.sh"
 source "$MODULES_DIR/tailscale.sh"
 # shellcheck disable=SC1090
 source "$MODULES_DIR/wireguard.sh"
+# shellcheck disable=SC1090
+source "$MODULES_DIR/settings.sh"
 
 # =============================================================================
 # FLOWS
@@ -163,8 +165,38 @@ setup_wireguard_flow() {
 }
 
 # =============================================================================
-# INTERACTIVE MENU
+# INTERACTIVE MENUS
 # =============================================================================
+
+show_settings_menu() {
+  local opt
+  while true; do
+    printf '\n'
+    printf '%b=============================================%b\n' "${GREEN}" "${NC}"
+    printf '%b     ⚙️   Ubuntu Settings Menu                %b\n' "${BOLD_GREEN}" "${NC}"
+    printf '%b=============================================%b\n' "${GREEN}" "${NC}"
+    printf '%b1)%b Change Password\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b2)%b Back to Main Menu\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b=============================================%b\n' "${GREEN}" "${NC}"
+
+    if read -p "Select an option [1-2]: " opt < /dev/tty; then
+      printf '\n'
+      case "$opt" in
+        1)
+          change_password_flow
+          ;;
+        2)
+          break
+          ;;
+        *)
+          printf "%bInvalid option. Please try again.%b\n" "${RED}" "${NC}"
+          ;;
+      esac
+    else
+      break
+    fi
+  done
+}
 
 show_menu() {
   local opt
@@ -175,11 +207,12 @@ show_menu() {
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"
     printf '%b1)%b Install Tailscale (Interactive Options)\n' "${BOLD_CYAN}" "${NC}"
     printf '%b2)%b Install Wireguard (Placeholder)\n' "${BOLD_CYAN}" "${NC}"
-    printf '%b3)%b Exit\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b3)%b Ubuntu Settings\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b4)%b Exit\n' "${BOLD_CYAN}" "${NC}"
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"
     
     # Read from /dev/tty to support interactive prompts when piped with curl | bash
-    if read -p "Select an option [1-3]: " opt < /dev/tty; then
+    if read -p "Select an option [1-4]: " opt < /dev/tty; then
       printf '\n'
       case "$opt" in
         1)
@@ -191,6 +224,9 @@ show_menu() {
           break
           ;;
         3)
+          show_settings_menu
+          ;;
+        4)
           printf "Exiting...\n"
           exit 0
           ;;
