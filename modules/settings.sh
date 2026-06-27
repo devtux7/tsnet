@@ -3,16 +3,18 @@
 
 read_password_with_asterisks() {
   local prompt="$1"
+  local var_name="$2"
   local char
   local password=""
 
-  # Print prompt to stdout
-  printf "%s" "$prompt"
+  # Print prompt directly to /dev/tty
+  printf "%s" "$prompt" > /dev/tty
 
   # Disable input echoing and read key by key from /dev/tty
   while IFS= read -r -s -n 1 char < /dev/tty; do
     # Enter key ends the password input
-    if [[ -z "$char" ]]; then
+    # Carriage return (\r) or newline (\n) or empty char
+    if [[ -z "$char" || "$char" == $'\n' || "$char" == $'\r' ]]; then
       break
     fi
     
@@ -22,17 +24,19 @@ read_password_with_asterisks() {
         # Remove last char from password string
         password="${password%?}"
         # Erase one asterisk on screen: move cursor back, print space, move cursor back again
-        printf '\b \b'
+        printf '\b \b' > /dev/tty
       fi
     else
       # Append character to password
       password+="$char"
-      # Print an asterisk
-      printf '*'
+      # Print an asterisk directly to /dev/tty
+      printf '*' > /dev/tty
     fi
   done
-  printf '\n'
-  echo "$password"
+  printf '\n' > /dev/tty
+  
+  # Return value by reference
+  eval "$var_name=\"\$password\""
 }
 
 change_password_flow() {
@@ -42,13 +46,13 @@ change_password_flow() {
   local pass1 pass2
   
   while true; do
-    pass1="$(read_password_with_asterisks "New password: ")"
+    read_password_with_asterisks "New password: " "pass1"
     if [[ -z "$pass1" ]]; then
       warn "Password cannot be empty. Please try again."
       continue
     fi
     
-    pass2="$(read_password_with_asterisks "Retype new password: ")"
+    read_password_with_asterisks "Retype new password: " "pass2"
     
     if [[ "$pass1" != "$pass2" ]]; then
       warn "Passwords do not match. Please try again."
