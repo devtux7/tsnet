@@ -205,9 +205,9 @@ show_menu() {
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"
     printf '%b     💻   Ubuntu Setup Menu                  %b\n' "${BOLD_GREEN}" "${NC}"
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"
-    printf '%b1)%b Install Tailscale (Interactive Options)\n' "${BOLD_CYAN}" "${NC}"
-    printf '%b2)%b Install Wireguard (Placeholder)\n' "${BOLD_CYAN}" "${NC}"
-    printf '%b3)%b Ubuntu Settings\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b1)%b Ubuntu Settings\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b2)%b Install Tailscale (Interactive Options)\n' "${BOLD_CYAN}" "${NC}"
+    printf '%b3)%b Install Wireguard (Placeholder)\n' "${BOLD_CYAN}" "${NC}"
     printf '%b4)%b Exit\n' "${BOLD_CYAN}" "${NC}"
     printf '%b=============================================%b\n' "${GREEN}" "${NC}"
     
@@ -216,15 +216,15 @@ show_menu() {
       printf '\n'
       case "$opt" in
         1)
+          show_settings_menu
+          ;;
+        2)
           setup_tailscale_flow
           break
           ;;
-        2)
+        3)
           setup_wireguard_flow
           break
-          ;;
-        3)
-          show_settings_menu
           ;;
         4)
           printf "Exiting...\n"
@@ -236,7 +236,7 @@ show_menu() {
       esac
     else
       # If reading from /dev/tty fails (non-interactive environment), default to Tailscale installation
-      warn "Non-interactive environment detected. Defaulting to Option 1: Tailscale."
+      warn "Non-interactive environment detected. Defaulting to Tailscale Installation."
       setup_tailscale_flow
       break
     fi

@@ -6,8 +6,8 @@ change_password_flow() {
   log "Changing password for Linux user: ${target_user}..."
   
   if [[ -n "${SUDO:-}" ]]; then
-    $SUDO passwd "$target_user"
+    $SUDO passwd "$target_user" < /dev/tty
   else
-    passwd "$target_user"
+    passwd "$target_user" < /dev/tty
   fi
 }

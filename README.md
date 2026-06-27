@@ -50,10 +50,10 @@ curl -fsSL "https://raw.githubusercontent.com/devtux7/tsnet/main/ubuntu.sh?$(dat
 ## Interactive Choices
 
 Upon running the script, you will be prompted with a choice:
-1) **Install Tailscale (Interactive Options)**: Fully installs and configures Tailscale, activates SSH and Exit Node parameters, and runs firewall lockdown.
-2) **Install Wireguard (Placeholder)**: Planned for future Wireguard VPN setups.
-3) **Ubuntu Settings**: Sub-menu with configuration tools:
+1) **Ubuntu Settings**: Sub-menu with configuration tools:
    - **Change Password**: Interactively update the password of the invoking user.
+2) **Install Tailscale (Interactive Options)**: Fully installs and configures Tailscale, activates SSH and Exit Node parameters, and runs firewall lockdown.
+3) **Install Wireguard (Placeholder)**: Planned for future Wireguard VPN setups.
 4) **Exit**: Safely exits the installer.
 
 ## Environment Variables
