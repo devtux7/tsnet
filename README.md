@@ -58,7 +58,7 @@ Upon running the script, you will be prompted with a choice:
 
 ## Environment Variables
 
-When choosing **Tailscale** (Option 1), you can customize behavior using the following environment variables:
+When choosing **Tailscale** (Option 2), you can customize behavior using the following environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
